@@ -17,3 +17,6 @@
 /install/linux
 /install/.venv
 /install/__pycache__
+
+# MacOS
+.DS_Store

@@ -1,17 +1,104 @@
-import { Button, VerticalBox, HorizontalBox, Slider, ProgressIndicator } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, Slider, ProgressIndicator, ScrollView } from "std-widgets.slint";
+
+
+
+component OptionList inherits Rectangle {
+    background: #181818FF;
+    width: 800px;
+    height: 480px;
+    visible: display_list;
+    in property <bool> display_list: false;
+    in property <[string]> options;
+    in property <string> flavor_text: "Please select an option";
+    out property <string> selected_option;
+    property <length> button_height: 60px;
+    in property <bool> app_button_enabled: true;
+    in property <image> app_button_image: @image-url("./res/burger_icon.svg");
+    callback select-option();
+    callback app-tray();
+
+    Rectangle {
+        background: #222222FF;
+        width: 800px;
+        height: 70px;
+        x: 0px;
+        y: 0px;
+        Text {
+            x: 10px;
+            y: 15px;
+            text: flavor_text;
+            font-size: 40px;
+            color: #FFFFFFFF;
+        }
+    }
+
+    ScrollView {
+        x: 0px;
+        y: 70px;
+        viewport-width: 800px;
+        viewport-height: options.length * button_height + options.length * 1px;
+        width: 800px;
+        height: 410px;
+
+        for option[i] in options: Rectangle {
+            Button {
+                x: 0px;
+                y: i * button_height + i * 1px;
+                width: 800px;
+                height: button_height;
+                text: option;
+                clicked => {
+                    selected_option = option;
+                    select-option();
+                }
+            }
+
+            Rectangle {
+                x: 0px;
+                y: i * button_height + i * 1px;
+                width: 800px;
+                height: button_height;
+                background: #181818FF;
+                Text {
+                    x: 10px;
+                    y: 15px;
+                    text: option;
+                    font-size: button_height - 30px;
+                    color: #FFFFFFFF;
+                }
+            }
+
+            Rectangle {
+                x: 0px;
+                y: i * button_height + i * 1px - 1px;
+                width: 800px;
+                height: 1px;
+                background: #FFFFFFFF;
+            }
+        }
+    }
+
+    Rectangle {
+        x: 0px;
+        y: 70px;
+        width: 800px;
+        height: 20px;
+        background: @linear-gradient(180deg, #000000FF 0%, #00000000 100%);
+    }
+}
 
 export component AppWindow inherits Window {
     in-out property <int> counter: 42;
-    in property <string> song_name: "Song Name";
-    in property <string> artist_name: "Artist Name";
-    in property <string> album_name: "Album Name";
-    in property <color> background_color: #CC0000FF;
+    in property <string> song_name: "";
+    in property <string> artist_name: "";
+    in property <string> album_name: "";
+    in property <color> background_color: #222222FF;
     in property <bool> use_white_text: true;
     in property <bool> paused: true;
     in property <bool> shuffled: false;
     in property <bool> liked: false;
     in property <bool> debug_icons: false;
-    in property <image> song_image: @image-url("./res/song_image.png");
+    in property <image> song_image: (debug_icons) ? @image-url("./res/song_image.png") : @image-url("./res/blank.png");
     in property <image> rw: (debug_icons) ? @image-url("./res/back_button.png") : @image-url("./res/back_button.svg");
     in property <image> pause: (debug_icons) ? @image-url("./res/pause_button.png") : @image-url("./res/pause_button.svg");
     in property <image> play:(debug_icons) ? @image-url("./res/play_button.png") : @image-url("./res/play_button.svg");
@@ -21,8 +108,17 @@ export component AppWindow inherits Window {
     in property <image> heart_on: (debug_icons) ? @image-url("./res/heart_on.png") : @image-url("./res/heart_on.svg");
     in property <image> shuffle_off: (debug_icons) ? @image-url("./res/shuffle_off.png") : @image-url("./res/shuffle_off.svg");
     in property <image> shuffle_on: (debug_icons) ? @image-url("./res/shuffle_on.png") : @image-url("./res/shuffle_on.svg");
+    in property <image> app_button_image: @image-url("./res/burger_icon.svg");
 
     out property <length> x-location: ta.mouse-x;
+
+    in property <[string]> bluetooth_devices;
+    in property <bool> display_bluetooth: false;
+    out property <string> selected_device;
+
+    in property <[string]> apps: ["Music", "Bluetooth", "Spotify", "Spotify Setup"];
+    in property <bool> display_apps: false;
+    out property <string> selected_app;
 
     in property <float> time: 0;
 
@@ -34,8 +130,36 @@ export component AppWindow inherits Window {
     callback refresh();
     callback seek();
     callback change-debug();
+    callback select-device();
+    callback select-app();
+    callback show-tray();
+
+    bluetooth_list := OptionList {
+        display_list: display_bluetooth;
+        options: bluetooth_devices;
+        flavor_text: "Please select a device";
+        select-option => {
+            selected_device = bluetooth_list.selected_option;
+            select-device();
+        }
+        app-tray => {
+            show-tray();
+        }
+    }
+
+    app_list := OptionList {
+        display_list: display_apps;
+        options: apps;
+        flavor_text: "Please select an app";
+        app_button_enabled: false;
+        select-option => {
+            selected_app = app_list.selected_option;
+            select-app();
+        }
+    }
 
     Rectangle {
+        visible: !display_bluetooth && !display_apps;
         Button {
             x: 790px;
             y: 0px;
@@ -61,6 +185,35 @@ export component AppWindow inherits Window {
 
                 background: root.background_color.darker(0.05);
 
+                // App Button
+                Button {
+                    x: 730px;
+                    y: 10px;
+                    width: 50px;
+                    height: 50px;
+                    clicked => {
+                        root.show-tray();
+                    }
+                }
+
+                Rectangle {
+                    x: 720px;
+                    y: 0px;
+                    width: 70px;
+                    height: 70px;
+                    background: root.background_color.darker(0.05);
+                }
+
+                Image {
+                    x: 730px;
+                    y: 10px;
+                    width: 50px;
+                    height: 50px;
+                    source: app_button_image;
+                }
+
+
+                // 
                 VerticalBox {
                     padding: 20px;
                     padding-left: 0px;
