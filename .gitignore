@@ -1,22 +1,9 @@
+.env
 /target
-/tmp
 
 # nix
-/nix/result
-/nix/resources/DOOM.WAD
-
-# init
-/initrd
-
-# qemu
-/qemu/emmc.img
-/qemu/kernel
-/qemu/btrfs.img
-
-# install
-/install/linux
-/install/.venv
-/install/__pycache__
+/result
+/out
 
 # MacOS
 .DS_Store
